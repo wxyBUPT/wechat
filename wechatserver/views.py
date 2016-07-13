@@ -7,10 +7,30 @@ from django.http import HttpRequest,HttpResponse,Http404
 from django.template.loader import get_template
 from django.template import Template
 from django.views.generic import View
+
+from wechatserver.wxResponse import TextResponse,ImageResponse,VoiceResponse
+from wechatserver.wxResponse import VideoResponse
 # Create your views here.
 
 
 class RootViewBase(View):
+    '''
+    具体的业务逻辑需要重写响应方法，
+    当前业务逻辑为回复用户发送过来的消息
+    '''
+
+    def debug_response(self,func):
+        toUser = self.xmlContent.findtext('ToUserName')
+        fromUser = self.xmlContent.findtext('FromUserName')
+        msgType = self.xmlContent.findtext('MsgType')
+        content = 'in %s : mygType:%s'%(func,msgType)
+        return TextResponse(fromUser,toUser,content)
+
+    def _getTFUser(self):
+        '''
+        一个下面各个方法用的比较多的部分
+        '''
+        return self.xmlContent.findtext('ToUserName'),self.xmlContent.findtext('FromUserName')
 
     def get(self,request):
         signature = request.GET['signature']
@@ -32,84 +52,136 @@ class RootViewBase(View):
         '''
         响应文本消息
         '''
-        print('文本消息，消息内容是')
-        print(self.xmlContent)
-        pass
+        toUser = self.xmlContent.findtext('ToUserName')
+        fromUser = self.xmlContent.findtext('FromUserName')
+        content = self.xmlContent.findtext('Content')
+        msgId = self.xmlContent.findtext('MsgId')
+        response = TextResponse(fromUser,toUser,'已经收到')
+        return response
 
     def on_link(self,request):
         '''
         响应连接消息
         '''
-        pass
+        return self.debug_response('on_link')
 
     def on_image(self,request):
         '''
         响应图片消息
         '''
-        pass
+        toUser,fromUser = self._getTFUser()
+        mediaId = self.xmlContent.findtext('MediaId')
+        imageResponse = ImageResponse(
+            fromUser,toUser,mediaId
+        )
+        return imageResponse
 
     def on_voice(self,request):
         '''
         响应语音消息
         '''
-        pass
+        toUser , fromUser = self._getTFUser()
+        createTime = self.xmlContent.findtext('CreateTime')
+        mediaId = self.xmlContent.findtext('MediaId')
+        format = self.xmlContent.findtext('Format')
+        msgId = self.xmlContent.findtext('MsgId')
+        response = VoiceResponse(
+            fromUser,toUser,mediaId
+        )
+        return response
 
     def on_video(self,request):
         '''
         响应视频消息
         '''
-        pass
+        toUser , fromUser = self._getTFUser()
+        mediaId = self.xmlContent.findtext('MediaId')
+        thumbMediaId = self.xmlContent.findtext('ThumbMediaId')
+        response = VideoResponse(
+            fromUser,toUser,mediaId,'你发过来的视频','简单的回复了你的视频'
+        )
+
+        return response
 
     def on_shortvideo(self,request):
         '''
         响应小视频消息
         '''
-        pass
+        return self.debug_response('on_shortvideo')
 
     def on_location(self,request):
         '''
         响应地理位置消息
         '''
-        pass
+        return self.debug_response('on_location')
 
     def on_subscribe(self,request):
+        if 'subscribed':
+            return self.debug_response('on_subscribe')
+        elif 'unsubscribed':
+            return self.debug_response('on_subscribe')
         pass
 
     def on_unsubscribe(self,request):
-        pass
+        return self.debug_response('on_unsubscribe')
 
     def on_click(self,request):
-        pass
+        return self.debug_response('on_click')
 
     def on_scan(self,request):
-        pass
+        return self.debug_response('on_scan')
 
     def on_location_update(self,request):
-        pass
+        return self.debug_response('on_location_update')
 
     def on_view(self):
-        pass
+        return self.debug_response('on_view')
 
     def on_scancode_push(self,request):
-        pass
+        '''
+        扫码推时间的时间推送
+        '''
+        return self.debug_response('on_scancode_push')
 
     def on_scancode_waitmsg(self,request):
-        pass
+        return self.debug_response('on_scancode_waitmsg')
 
     def on_pic_sysphoto(self,request):
-        pass
+        return self.debug_response('on_pic_sysphoto')
 
     def on_pic_photo_or_album(self,request):
-        pass
+        return self.debug_response('on_pic_photo_or_album')
 
     def on_pic_weixin(self,request):
-        pass
+        return self.debug_response('on_pic_weixin')
 
     def on_location_select(self,request):
-        pass
+        return self.debug_response('on_location_select')
 
     def not_defined(self,request):
-        pass
+        return self.debug_response('not_defined')
+
+    def route_event(self):
+        '''
+        为event 事件添加路由
+        '''
+        ACCTION_MAP = {
+            #notice subscribe have two condition
+            'subscribe':self.on_subscribe,
+            'unsubscribe':self.on_unsubscribe,
+            'SCAN':self.on_scan,
+            'LOCATION':self.on_location,
+            'CLICK':self.on_click,
+            'VIEW':self.on_view,
+            'scancode_push':self.on_scancode_push,
+            'scancode_waitmsg':self.on_scancode_waitmsg,
+            'pic_sysphoto':self.on_pic_sysphoto,
+            'pic_photo_or_album':self.on_pic_photo_or_album,
+            'pic_weixin':self.on_pic_weixin,
+            'location_select':self.on_location_select,
+        }
+        event = self.xmlContent.findtext('Event')
+        return ACCTION_MAP.get(event,self.not_defined)
 
     def action_map(self,action):
 
@@ -121,6 +193,7 @@ class RootViewBase(View):
             'shortvideo':self.on_shortvideo,
             'location':self.on_location,
             'link':self.on_link,
+            'event':self.route_event(),
         }
         return ACTION_MAP.get(action,self.not_defined)
 

@@ -87,13 +87,45 @@ class Foo:
         }
         return DICT.get(action,self.nothing)
 
+class Bar:
+    def __init__(self,str = None,bb=None):
+        self.str = str
+        self.k = None
+        self.bb = bb
+class Foo(Bar):
+    def __init__(self,k,*args,**kwargs):
+        self.k = k
+        self.t = self.cal()
+        super(Foo,self).__init__(*args,**kwargs)
+
+        pass
+
+    def cal(self):
+        return 1
+
+import xml.etree.ElementTree as ET
+def Comment(text = None):
+    element = ET.Element(Comment)
+    element.text = text
+    return element
+
+class Foo:
+    def ttt(self):
+        a = 1
+        b = 2
+
+class Bar(Foo):
+    def ttt(self):
+        super(Bar,self).ttt()
+        c = 3
+        print()
+
+
 
 if __name__ =="__main__":
-    k = Foo()
-    action = k.action_map('foo')
-    action()
-    action = k.action_map('b')
-    action()
-
-
-
+    foo = Foo(1,'w',bb=1)
+    #for item in dir(foo):
+    #    print(item)
+    #    print(getattr(foo,item))
+    k = Comment('wang')
+    print(k)

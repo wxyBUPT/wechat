@@ -15,6 +15,9 @@ from wechatserver.models import Token
 
 dlogger = logging.getLogger('debug')
 class RemoteTool(Singleton):
+    '''
+    负责所有向微信服务器发送请求
+    '''
 
     def __init__(self):
         dlogger.debug('init RemoteTool')
@@ -90,7 +93,7 @@ class RemoteTool(Singleton):
         )
         return r.json()
 
-    def _get(self,url):
+    def _get(self,url,other_par = {}):
         if url.startswith('http'):
             pass
         else:
@@ -98,6 +101,7 @@ class RemoteTool(Singleton):
         par = {
             'access_token':self.get_token()
         }
+        par.update(other_par)
         r = requests.get(url,params=par)
         return r.json()
 
@@ -318,3 +322,35 @@ class RemoteTool(Singleton):
         }
         return self._post(updateremark_url,data_dict)
 
+    def get_user_info(self,openid):
+        '''
+        获得用户基本信息
+        :param openid:
+        :return:
+        '''
+        from wechatserver.conf import user_info_url
+        par = {
+            "openid":openid,
+            "lang":"zh_CN"
+        }
+        return self._get(user_info_url,par)
+
+    def get_user_info_batchget(self,openid_list):
+        '''
+        批量获取用户基本信息
+        :param openid_list:
+        :return:
+        '''
+        from wechatserver.conf import user_info_batchget_url
+        tmp = []
+        for openid in openid_list:
+            tmp.append(
+                {
+                    "openid":openid,
+                    "lang":"zh-CN"
+                }
+            )
+        data_dict = {
+            "user_list":tmp
+        }
+        return self._post(user_info_batchget_url,data_dict)

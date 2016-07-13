@@ -75,7 +75,6 @@ class User(models.Model):
         help_text='user_gender',default=FEMALE,
         null=True
     )
-    #备注名
     city = models.ForeignKey(City,null=True)
     country = models.ForeignKey(Country,null=True)
     province = models.ForeignKey(Province,null=True)
